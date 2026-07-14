@@ -55,7 +55,9 @@ class MOSO(opt_mixin.WeightDecayMixin, optim.Optimizer):
         params: Iterable of parameters to optimize or dicts defining parameter groups.
         lr: Learning rate.
         momentum: EMA coefficient for the Muon-style momentum.
-        betas: Inner Adam beta parameters ``(beta1, beta2)``.
+        beta2: EMA coefficient for the inner second-moment (RMS) normalization applied in the eigenbasis.
+            The only first-moment EMA in MOSO is the Muon-style ``momentum``; the inner optimizer adds no
+            momentum of its own (its ``beta1`` is fixed at 0), so no second, redundant momentum is possible.
         shampoo_beta: EMA coefficient for the one-sided momentum covariance.
         eps: Inner Adam epsilon for numerical stability.
         weight_decay: Weight decay coefficient.
@@ -67,7 +69,7 @@ class MOSO(opt_mixin.WeightDecayMixin, optim.Optimizer):
         params: ParamsT,
         lr: float = 3e-4,
         momentum: float = 0.95,
-        betas: tuple[float, float] = (0.9, 0.95),
+        beta2: float = 0.95,
         shampoo_beta: float = 0.95,
         eps: float = 1e-8,
         weight_decay: float = 0.01,
@@ -80,7 +82,7 @@ class MOSO(opt_mixin.WeightDecayMixin, optim.Optimizer):
         defaults = {
             "lr": lr,
             "momentum": momentum,
-            "betas": betas,
+            "beta2": beta2,
             "shampoo_beta": shampoo_beta,
             "eps": eps,
             "weight_decay": weight_decay,
@@ -184,7 +186,7 @@ class MOSO(opt_mixin.WeightDecayMixin, optim.Optimizer):
                         momentum_projected,
                         state["exp_avg"],
                         state["exp_avg_sq"],
-                        betas=group["betas"],
+                        betas=(0.0, group["beta2"]),
                         eps=group["eps"],
                         correct_bias=True,
                         nesterov=False,
